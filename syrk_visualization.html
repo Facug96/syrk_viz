@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización SYRK Blocked</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .controls {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+        
+        .matrices-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .matrix-section {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        
+        .matrix {
+            display: inline-block;
+            border: 2px solid #666;
+            background: #333;
+        }
+        
+        .matrix-row {
+            display: flex;
+        }
+        
+        .cell {
+            width: 35px;
+            height: 35px;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .current-block { background: #ff6b6b !important; color: #fff; }
+        .active-row { background: #4ecdc4 !important; color: #000; }
+        .active-col { background: #45b7d1 !important; color: #000; }
+        .k-panel { background: #96ceb4 !important; color: #000; }
+        .result-cell { background: #feca57 !important; color: #000; }
+        
+        button {
+            background: #4ecdc4;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover { background: #45b7d1; }
+        button:disabled { background: #666; color: #999; cursor: not-allowed; }
+        
+        .info {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #444;
+        }
+        
+        .step-counter {
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .algorithm-info {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #666;
+        }
+        
+        select, input {
+            background: #444;
+            color: #e0e0e0;
+            border: 1px solid #666;
+            padding: 5px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; color: #4ecdc4;">🔥 Visualización SYRK Blocked Algorithm</h1>
+        
+        <div class="algorithm-info">
+            <h3>📋 Algoritmo: C = A × A^T (Blocked)</h3>
+            <p><strong>SYRK</strong> (Symmetric Rank-K update) calcula la multiplicación de una matriz por su transpuesta usando bloques para optimizar el acceso a memoria y paralelización.</p>
+            <p><strong>Estrategia:</strong> Solo calcula el triángulo superior (aprovecha simetría) y luego refleja.</p>
+        </div>
+        
+        <div class="controls">
+            <label>Dimensiones A: </label>
+            <select id="sizeSelect">
+                <option value="4,3">4×3</option>
+                <option value="6,4" selected>6×4</option>
+                <option value="8,6">8×6</option>
+            </select>
+            
+            <label>Tamaño bloque (Bi,Bj,Bk): </label>
+            <select id="blockSelect">
+                <option value="2,2,2" selected>2×2×2</option>
+                <option value="3,3,2">3×3×2</option>
+                <option value="4,4,3">4×4×3</option>
+            </select>
+            
+            <button onclick="initializeMatrices()">🔄 Reiniciar</button>
+            <button onclick="nextStep()" id="nextBtn">▶️ Siguiente Paso</button>
+            <button onclick="autoRun()" id="autoBtn">🚀 Auto Run</button>
+        </div>
+        
+        <div class="matrices-container">
+            <div class="matrix-section">
+                <h3>Matriz A (n×m)</h3>
+                <div id="matrixA" class="matrix"></div>
+            </div>
+            
+            <div class="matrix-section">
+                <h3>Matriz C = A×A^T (n×n)</h3>
+                <div id="matrixC" class="matrix"></div>
+            </div>
+        </div>
+        
+        <div class="info">
+            <div class="step-counter" id="stepCounter">Paso 0</div>
+            <div id="stepInfo">Inicializando algoritmo...</div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color current-block"></div>
+                    <span>Bloque C actual</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color active-row"></div>
+                    <span>Fila i activa</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color active-col"></div>
+                    <span>Fila j activa</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color k-panel"></div>
+                    <span>Panel k actual</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color result-cell"></div>
+                    <span>Celda calculada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let n, m, Bi, Bj, Bk;
+        let A, C;
+        let currentStep = 0;
+        let steps = [];
+        let autoRunning = false;
+
+        function initializeMatrices() {
+            const [n_val, m_val] = document.getElementById('sizeSelect').value.split(',').map(Number);
+            const [Bi_val, Bj_val, Bk_val] = document.getElementById('blockSelect').value.split(',').map(Number);
+            
+            n = n_val; m = m_val; Bi = Bi_val; Bj = Bj_val; Bk = Bk_val;
+            
+            // Inicializar matriz A con valores aleatorios entre 0 y 1
+            A = Array.from({length: n}, (_, i) => 
+                Array.from({length: m}, (_, j) => Math.floor(Math.random() * 2) )
+            );
+            
+            // Inicializar C en ceros
+            C = Array.from({length: n}, () => Array.from({length: n}, () => 0));
+            
+            generateSteps();
+            currentStep = 0;
+            renderMatrices();
+            updateStepInfo();
+        }
+
+        function generateSteps() {
+            steps = [];
+            let stepCount = 0;
+            
+            // Generar pasos del algoritmo
+            for (let ii = 0; ii < n; ii += Bi) {
+                for (let jj = ii; jj < n; jj += Bj) {
+                    const i_max = Math.min(ii + Bi, n);
+                    const j_max = Math.min(jj + Bj, n);
+                    
+                    for (let kk = 0; kk < m; kk += Bk) {
+                        const k_max = Math.min(kk + Bk, m);
+                        
+                        for (let i = ii; i < i_max; i++) {
+                            for (let j = jj; j < j_max; j++) {
+                                let acc = 0;
+                                for (let k = kk; k < k_max; k++) {
+                                    acc += A[i][k] * A[j][k];
+                                }
+                                
+                                steps.push({
+                                    type: 'compute',
+                                    ii, jj, i_max, j_max, kk, k_max,
+                                    i, j, acc,
+                                    description: `Calculando C[${i}][${j}] += dot(A[${i}][${kk}:${k_max}], A[${j}][${kk}:${k_max}]) = ${acc.toFixed(2)}`
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Paso de simetrización
+            steps.push({
+                type: 'symmetrize',
+                description: 'Copiando triángulo superior al inferior (aprovechando simetría)'
+            });
+        }
+
+        function renderMatrices() {
+            renderMatrix('matrixA', A, n, m, 'A');
+            renderMatrix('matrixC', C, n, n, 'C');
+        }
+
+        function renderMatrix(containerId, matrix, rows, cols, name) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            for (let i = 0; i < rows; i++) {
+                const row = document.createElement('div');
+                row.className = 'matrix-row';
+                
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `${name}_${i}_${j}`;
+                    cell.textContent = matrix[i][j].toFixed(1);
+                    row.appendChild(cell);
+                }
+                container.appendChild(row);
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.className = 'cell';
+            });
+        }
+
+        function nextStep() {
+            if (currentStep >= steps.length) return;
+            
+            const step = steps[currentStep];
+            clearHighlights();
+            
+            if (step.type === 'compute') {
+                // Pinto bloque actual en C
+                for (let i = step.ii; i < step.i_max; i++) {
+                    for (let j = step.jj; j < step.j_max; j++) {
+                        const cell = document.getElementById(`C_${i}_${j}`);
+                        if (cell) cell.classList.add('current-block');
+                    }
+                }
+                
+                // Pinto filas activas en A
+                for (let k = step.kk; k < step.k_max; k++) {
+                    const cellI = document.getElementById(`A_${step.i}_${k}`);
+                    const cellJ = document.getElementById(`A_${step.j}_${k}`);
+                    if (cellI) cellI.classList.add('active-row');
+                    if (cellJ) cellJ.classList.add('active-col');
+                }
+                
+                // Pinto panel k en A
+                for (let i = 0; i < n; i++) {
+                    for (let k = step.kk; k < step.k_max; k++) {
+                        const cell = document.getElementById(`A_${i}_${k}`);
+                        if (cell && !cell.classList.contains('active-row') && !cell.classList.contains('active-col')) {
+                            cell.classList.add('k-panel');
+                        }
+                    }
+                }
+                
+                // Actualizar valor en C
+                C[step.i][step.j] += step.acc;
+                const resultCell = document.getElementById(`C_${step.i}_${step.j}`);
+                if (resultCell) {
+                    resultCell.textContent = C[step.i][step.j].toFixed(1);
+                    resultCell.classList.add('result-cell');
+                }
+                
+            } else if (step.type === 'symmetrize') {
+                // Copiar triángulo superior al inferior
+                for (let i = 0; i < n; i++) {
+                    for (let j = i + 1; j < n; j++) {
+                        C[j][i] = C[i][j];
+                        const cell = document.getElementById(`C_${j}_${i}`);
+                        if (cell) {
+                            cell.textContent = C[j][i].toFixed(1);
+                            cell.classList.add('result-cell');
+                        }
+                    }
+                }
+            }
+            
+            currentStep++;
+            updateStepInfo();
+            
+            if (currentStep >= steps.length) {
+                document.getElementById('nextBtn').disabled = true;
+                document.getElementById('autoBtn').disabled = true;
+            }
+        }
+
+        function updateStepInfo() {
+            document.getElementById('stepCounter').textContent = `Paso ${currentStep}/${steps.length}`;
+            
+            if (currentStep < steps.length) {
+                document.getElementById('stepInfo').textContent = steps[currentStep].description;
+            } else {
+                document.getElementById('stepInfo').textContent = '✅ Algoritmo completado! C = A×A^T calculada usando bloques.';
+            }
+        }
+
+        async function autoRun() {
+            if (autoRunning) return;
+            autoRunning = true;
+            document.getElementById('autoBtn').disabled = true;
+            
+            while (currentStep < steps.length) {
+                nextStep();
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+            
+            autoRunning = false;
+        }
+
+        // Init
+        initializeMatrices();
+    </script>
+</body>
+</html>
