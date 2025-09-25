@@ -136,12 +136,12 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="text-align: center; color: #4ecdc4;">🔥 Visualización SYRK Blocked Algorithm</h1>
+        <h1 style="text-align: center; color: #4ecdc4;">Visualización SYRK Blocked Algorithm</h1>
         
         <div class="algorithm-info">
-            <h3>📋 Algoritmo: C = A × A^T (Blocked)</h3>
+            <h3>Algoritmo: C = A × A^T (Blocked)</h3>
             <p><strong>SYRK</strong> (Symmetric Rank-K update) calcula la multiplicación de una matriz por su transpuesta usando bloques para optimizar el acceso a memoria y paralelización.</p>
-            <p><strong>Estrategia:</strong> Solo calcula el triángulo superior (aprovecha simetría) y luego refleja.</p>
+            <p> Solo calcula el triángulo superior (aprovecha simetría) y luego refleja.</p>
         </div>
         
         <div class="controls">
@@ -161,7 +161,7 @@
             
             <button onclick="initializeMatrices()">🔄 Reiniciar</button>
             <button onclick="nextStep()" id="nextBtn">▶️ Siguiente Paso</button>
-            <button onclick="autoRun()" id="autoBtn">🚀 Auto Run</button>
+            <button onclick="autoRun()" id="autoBtn">Auto Run</button>
         </div>
         
         <div class="matrices-container">
@@ -220,7 +220,7 @@
             
             // Inicializar matriz A con valores aleatorios entre 0 y 1
             A = Array.from({length: n}, (_, i) => 
-                Array.from({length: m}, (_, j) => Math.floor(Math.random() * 2) )
+                Array.from({length: m}, (_, j) => Math.floor(Math.random() * 9) )
             );
             
             // Inicializar C en ceros
@@ -267,7 +267,7 @@
             // Paso de simetrización
             steps.push({
                 type: 'symmetrize',
-                description: 'Copiando triángulo superior al inferior (aprovechando simetría)'
+                description: 'Copiando triángulo superior al inferior'
             });
         }
 
@@ -371,7 +371,7 @@
             if (currentStep < steps.length) {
                 document.getElementById('stepInfo').textContent = steps[currentStep].description;
             } else {
-                document.getElementById('stepInfo').textContent = '✅ Algoritmo completado! C = A×A^T calculada usando bloques.';
+                document.getElementById('stepInfo').textContent = ' Algoritmo completado! C = A×A^T calculada usando bloques.';
             }
         }
 
